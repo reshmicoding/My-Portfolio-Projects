@@ -1,0 +1,213 @@
+Now I have everything I need. Let me craft a comprehensive, Harvard-level project brief.
+
+---
+
+# 🎓 Harvard University — Data Science in Finance
+## DS 285: Advanced Financial Data Science with Python
+### Capstone Project: **Multi-Factor Equity Risk & Portfolio Analytics Engine**
+
+---
+
+## 📦 Dataset
+
+**S&P 500 OHLCV Stock Data (2.7M+ rows)** — Daily Open/High/Low/Close/Volume data for 472 S&P 500 stocks spanning 26 years.
+
+🔗 **Primary Dataset:** [https://www.kaggle.com/datasets/jacksaleeby/s-and-p500-historical-data](https://www.kaggle.com/datasets/jacksaleeby/s-and-p500-historical-data)
+
+🔗 **Supplementary (Fundamentals):** [https://www.kaggle.com/datasets/paytonfisher/sp-500-companies-with-financial-information](https://www.kaggle.com/datasets/paytonfisher/sp-500-companies-with-financial-information)
+
+---
+
+## 🧠 Project Overview
+
+You are a **quantitative analyst** at a hedge fund. Your mandate is to build a **full-stack equity analytics pipeline** — from raw price ingestion to portfolio construction and risk reporting — using nothing but Python's scientific stack. This project spans **7 interconnected modules**, each of which is graded separately and builds on the last.
+
+---
+
+## 🛠️ Required Libraries
+
+| Library | Role |
+|---|---|
+| `pandas` | Data wrangling, time-series indexing, multi-index operations |
+| `numpy` | Matrix algebra, returns computation, covariance estimation |
+| `matplotlib` / `seaborn` | All visualizations |
+| `statsmodels` | OLS regression, ARIMA, ACF/PACF, hypothesis testing |
+| `scipy` | Statistical tests, optimization, distributions |
+| `scikit-learn` | PCA, clustering, cross-validation |
+
+---
+
+## 📋 Module Breakdown
+
+---
+
+### **Module 1 — Data Pipeline & Feature Engineering** *(Pandas + NumPy)*
+
+**Objective:** Build a production-quality data ingestion and cleaning pipeline.
+
+**Tasks:**
+1. Load all 472 individual stock CSVs into a single **MultiIndex DataFrame** `(Date, Ticker)` using `pd.concat` and proper `DatetimeIndex` parsing.
+2. Detect and handle: missing trading days (market holidays), zero-volume days, and price outliers (Z-score > 4 on daily returns). Document every imputation decision.
+3. Compute for **all 472 stocks simultaneously** using vectorized NumPy/Pandas operations (no loops):
+   - **Log returns:** $r_t = \ln(P_t / P_{t-1})$
+   - **Rolling volatility:** 21-day and 63-day annualized standard deviation
+   - **Rolling Sharpe Ratio** (assume $r_f = 0$ for simplicity): $\frac{\bar{r}}{\sigma} \times \sqrt{252}$
+   - **Garman-Klass Volatility Estimator:** $\sigma^2_{GK} = 0.5[\ln(H/L)]^2 - (2\ln 2 - 1)[\ln(C/O)]^2$
+4. Build a **`pivot_table`** of adjusted close prices: rows = dates, columns = tickers. Compute a **full 472×472 rolling correlation matrix** using a 252-day window.
+
+**Deliverable:** A clean, fully documented `DataPipeline` class with `load()`, `clean()`, `engineer_features()` methods.
+
+---
+
+### **Module 2 — Exploratory Data Analysis & Statistical Testing** *(Pandas + SciPy + Matplotlib)*
+
+**Objective:** Rigorously characterize the statistical properties of financial returns.
+
+**Tasks:**
+1. Plot the **empirical return distribution** for 10 selected large-cap stocks. Overlay a fitted normal distribution. Compute **skewness and excess kurtosis** — state what these imply about tail risk.
+2. **Normality testing:** Apply the **Jarque-Bera test** (`scipy.stats.jarque_bera`) and **Kolmogorov-Smirnov test** to all 472 stocks. Produce a histogram of p-values. What fraction of stocks reject normality at α = 0.01?
+3. **Autocorrelation analysis:** Use `statsmodels.graphics.tsaplots.plot_acf` / `plot_pacf` on squared returns for 5 stocks. Interpret ARCH effects.
+4. Perform a **Ljung-Box test** (`statsmodels.stats.diagnostic.acorr_ljungbox`) on raw and squared returns. Tabulate results.
+5. Plot a **sector-level correlation heatmap** (use the fundamentals dataset to map tickers to GICS sectors). Which sectors are most correlated?
+
+---
+
+### **Module 3 — Factor Model Estimation** *(Statsmodels + NumPy)*
+
+**Objective:** Estimate a **Fama-French-style 3-factor model** using OLS regression.
+
+**Background:** The Fama-French model decomposes a stock's excess return:
+$$r_i - r_f = \alpha_i + \beta_{MKT}(r_m - r_f) + \beta_{SMB} \cdot SMB + \beta_{HML} \cdot HML + \varepsilon_i$$
+
+**Tasks:**
+1. **Construct the factors from scratch** using the dataset:
+   - **Market factor (MKT):** Equal-weighted average return of all 472 stocks minus a proxy risk-free rate (use 3-month T-bill rate, which you will download from FRED via `pandas_datareader` or hardcode as a constant 4.5% annualized).
+   - **SMB (Small Minus Big):** Sort stocks into top/bottom tercile by market-cap proxy (use average dollar volume as a proxy). SMB = return of bottom tercile minus top tercile.
+   - **HML (High Minus Low):** Sort stocks into terciles by **price-to-book proxy** (use 52-week return momentum as substitute if P/B unavailable). HML = return of top tercile minus bottom tercile.
+2. Run `statsmodels.OLS` to estimate $\alpha_i, \beta_{MKT}, \beta_{SMB}, \beta_{HML}$ for **every stock**. Use `statsmodels.OLS` with `HAC`-robust standard errors (Newey-West).
+3. Store all coefficients in a DataFrame. Plot the **distribution of betas** across all 472 stocks.
+4. **Fama-MacBeth cross-sectional regression:** In each month $t$, run a cross-sectional OLS of realized returns on the prior-month betas. Average the monthly coefficients to get risk premia. Test if risk premia are significantly different from zero using a t-test.
+5. Compute the **Information Ratio** for each stock: $IR = \alpha / \text{std}(\varepsilon)$. Identify the top 20 stocks by IR.
+
+---
+
+### **Module 4 — Volatility Modeling with GARCH** *(Statsmodels + SciPy)*
+
+**Objective:** Model time-varying volatility for risk management.
+
+**Tasks:**
+1. Select **5 stocks** from different sectors. For each, fit:
+   - **ARMA(1,1)-GARCH(1,1)** model using `arch` library (or implement manually via `scipy.optimize.minimize` with MLE — the manual implementation is required for at least 1 stock for full marks).
+   - Compare AIC/BIC across GARCH(1,1), GARCH(2,1), and EGARCH(1,1).
+2. Plot the **conditional volatility** time series against the rolling historical volatility. Mark periods of market stress (dot-com crash 2001, GFC 2008–09, COVID crash 2020).
+3. Generate **10-day ahead volatility forecasts** with 95% confidence intervals.
+4. **VaR & CVaR (Expected Shortfall):**
+   - Compute **Historical VaR** at 95% and 99% confidence levels for a $1M position.
+   - Compute **Parametric VaR** using the GARCH-forecasted variance.
+   - Compute **CVaR** (mean of losses beyond VaR threshold).
+   - Backtest VaR using **Kupiec's POF test** (`scipy.stats.chi2`): test whether the actual breach rate matches the theoretical rate.
+
+---
+
+### **Module 5 — Portfolio Optimization** *(NumPy + SciPy + Matplotlib)*
+
+**Objective:** Implement Modern Portfolio Theory from scratch.
+
+**Tasks:**
+1. Select a **universe of 50 stocks** (chosen by highest Information Ratio from Module 3).
+2. Using the **rolling 252-day covariance matrix** (shrinkage-adjusted using **Ledoit-Wolf estimator** via `sklearn.covariance.LedoitWolf`):
+3. **Implement the following portfolios from scratch** using `scipy.optimize.minimize` (SLSQP solver):
+   - **Minimum Variance Portfolio (MVP)**
+   - **Maximum Sharpe Ratio Portfolio (Tangency Portfolio)**
+   - **Risk Parity Portfolio** (equalize marginal risk contributions)
+   - **Maximum Diversification Portfolio**
+4. Plot the **Efficient Frontier**: Generate 5,000 random portfolios (Monte Carlo), overlay the efficient frontier (parametric), and mark each of the 4 optimized portfolios.
+5. Compute for each portfolio: **annualized return, volatility, Sharpe ratio, max drawdown, Calmar ratio, Sortino ratio**.
+6. **Out-of-sample backtest (2018–2024):** Re-optimize monthly using an expanding window. Track portfolio value, compute cumulative returns, and plot against the S&P 500 equal-weight benchmark.
+
+---
+
+### **Module 6 — Dimensionality Reduction & Regime Detection** *(Scikit-learn + Statsmodels)*
+
+**Objective:** Uncover latent market structure.
+
+**Tasks:**
+1. **PCA on the return correlation matrix:** Use `sklearn.decomposition.PCA`. Plot the **scree plot** (explained variance ratio). How many factors explain 80% of variance? Interpret the first 3 principal components by examining their loadings — which sectors dominate each PC?
+2. **Rolling PCA:** Compute the % variance explained by PC1 in a rolling 252-day window. Plot this over time. A spike indicates market stress (all stocks moving together). Validate against known crisis dates.
+3. **K-Means Clustering** (`sklearn.cluster.KMeans`) of stocks based on their factor betas from Module 3. Use the **elbow method** and **silhouette score** to determine optimal $k$. Visualize clusters using t-SNE (2D).
+4. **Hidden Markov Model for regime detection** using `statsmodels` or manual implementation: Fit a 2-state Gaussian HMM on SPY (market proxy) returns. Identify bull/bear regimes. Plot the smoothed state probabilities over time. Does the portfolio from Module 5 perform differently across regimes?
+
+---
+
+### **Module 7 — Final Risk Report & Stress Testing** *(All Libraries)*
+
+**Objective:** Produce a quantitative risk report for the Tangency Portfolio.
+
+**Tasks:**
+1. **Stress testing:** Apply the following historical shocks to your portfolio:
+   - 2008 GFC: use actual daily returns from Sep–Nov 2008
+   - COVID crash: use actual daily returns from Feb 19–Mar 23, 2020
+   - Compute P&L impact, VaR breach count, and recovery time for each scenario.
+2. **Sensitivity analysis:** Plot portfolio Sharpe ratio as a function of: (a) number of assets in universe, (b) rebalancing frequency (daily/weekly/monthly), (c) covariance estimation window (63, 126, 252 days). Use `matplotlib` subplots.
+3. Produce a **comprehensive dashboard** (8-panel `matplotlib` figure) containing:
+   - Cumulative return vs benchmark
+   - Rolling Sharpe ratio (252-day)
+   - Rolling volatility (63-day)
+   - Drawdown chart
+   - Sector allocation over time (stacked area chart)
+   - Factor beta evolution (rolling OLS)
+   - VaR vs actual losses (backtest)
+   - Regime probability overlay
+
+---
+
+## 📐 Grading Rubric
+
+| Module | Points | Key Assessment |
+|---|---|---|
+| 1 — Data Pipeline | 15 | Correctness, vectorization, no loops |
+| 2 — EDA & Stats | 15 | Test interpretation, visualizations |
+| 3 — Factor Model | 20 | OLS rigor, Fama-MacBeth execution |
+| 4 — GARCH & VaR | 15 | Model selection, backtest validity |
+| 5 — Optimization | 20 | Math correctness, OOS backtest |
+| 6 — PCA & Regimes | 10 | PC interpretation, regime logic |
+| 7 — Risk Report | 5 | Clarity, completeness of dashboard |
+| **Total** | **100** | |
+
+**Bonus (+10):** Implement the **Black-Litterman model** to incorporate analyst views into the portfolio optimization. Views must be stated explicitly and encoded as the $P$ and $Q$ matrices.
+
+---
+
+## ⚠️ Hard Constraints
+
+- **No financial data APIs** (yfinance, Bloomberg, etc.) — all data must come from the Kaggle dataset.
+- **No loop-based return computation.** All operations on the full 472×N price matrix must be vectorized.
+- Every statistical test must include: test statistic, p-value, and a **written economic interpretation** (2–3 sentences).
+- All figures must have: title, axis labels, legend, and a descriptive caption. Minimum figure size: `(12, 6)`.
+- Final submission: a single **Jupyter Notebook** with a logical narrative, runnable top-to-bottom in under 10 minutes.
+
+---
+
+## 📅 Timeline
+
+| Week | Deliverable |
+|---|---|
+| 1–2 | Modules 1–2 |
+| 3–4 | Modules 3–4 |
+| 5–6 | Module 5 |
+| 7–8 | Modules 6–7 + Final submission |
+
+---
+
+## 💡 Why This Project?
+
+This project forces mastery of the full data science stack as applied to real financial problems. A student who completes it will have demonstrated:
+
+- **Pandas/NumPy** at scale (2.7M rows, 472 assets, MultiIndex operations)
+- **Statsmodels** for econometric modeling with proper inference
+- **SciPy** for constrained numerical optimization and statistical testing
+- **Matplotlib** for publication-quality, multi-panel financial visualizations
+- **Scikit-learn** for unsupervised learning and dimensionality reduction
+- The ability to connect **mathematical finance theory** (Markowitz, CAPM, Fama-French) to **working code**
+
+Good luck. The market rewards rigor. So do we.
