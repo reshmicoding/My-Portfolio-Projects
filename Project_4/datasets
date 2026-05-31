@@ -1,0 +1,65 @@
+Here are the direct links for the four datasets from your project, with instructions for accessing each one:
+
+---
+
+## Dataset 1: Indian Stock Market Minute-Level Data
+
+| Detail | Information |
+| :--- | :--- |
+| **Link** | [https://huggingface.co/datasets/xxparthparekhxx/indian-stock-market-minute-data](https://huggingface.co/datasets/xxparthparekhxx/indian-stock-market-minute-data) |
+| **Scale** | 720M+ rows of 1-minute intraday equity data |
+| **Key Columns** | `symbol`, `timestamp`, `open`, `high`, `low`, `close`, `volume`, `oi` |
+| **Access** | Available for download via Hugging Face Datasets library or direct file download |
+
+---
+
+## Dataset 2: FNSPID (Financial News & Stock Price Integration Dataset)
+
+| Detail | Information |
+| :--- | :--- |
+| **Link** | [https://github.com/Zdong104/FNSPID_Financial_News_Dataset](https://github.com/Zdong104/FNSPID_Financial_News_Dataset) |
+| **Scale** | 29.7M stock prices + 15.7M news records for 4,775 S&P 500 companies (1999–2023) |
+| **Key Columns** | `Date`, `Ticker`, `Open`, `High`, `Low`, `Close`, `Volume` + news headlines |
+| **Access** | Data hosted on Hugging Face. Download commands: |
+
+```bash
+wget https://huggingface.co/datasets/Zihan1004/FNSPID/resolve/main/Stock_price/full_history.zip
+wget https://huggingface.co/datasets/Zihan1004/FNSPID/resolve/main/Stock_news/nasdaq_exteral_data.csv
+```
+
+> 📄 **Citation:** FNSPID was accepted as a KDD2024 Applied Data Science Track paper .
+
+---
+
+## Dataset 3: Optiver Realized Volatility Prediction Dataset
+
+| Detail | Information |
+| :--- | :--- |
+| **Link** | [https://www.kaggle.com/competitions/optiver-realized-volatility-prediction/data](https://www.kaggle.com/competitions/optiver-realized-volatility-prediction/data) |
+| **Scale** | 167M rows of book and trade data across 112 stocks |
+| **Key Columns** | `stock_id`, `time_id`, `seconds_in_bucket`, `bid_price1`, `ask_price1`, `bid_size1`, `ask_size1` |
+| **Access** | Requires Kaggle account and competition acceptance |
+
+---
+
+## Dataset 4: S&P 500 Daily Stocks Dataset
+
+| Detail | Information |
+| :--- | :--- |
+| **Link** | [https://www.kaggle.com/datasets/andrewmvd/sp-500-stocks](https://www.kaggle.com/datasets/andrewmvd/sp-500-stocks) |
+| **Scale** | Daily historical data for all S&P 500 components (updated daily) |
+| **Key Columns** | `Date`, `Symbol`, `Open`, `High`, `Low`, `Close`, `Adj Close`, `Volume` |
+| **Access** | Direct download from Kaggle (no competition acceptance required) |
+
+---
+
+## Quick Reference Table
+
+| Dataset | Platform | Link |
+| :--- | :--- | :--- |
+| Indian Stock Market Minute-Level | Hugging Face | [xxparthparekhxx/indian-stock-market-minute-data](https://huggingface.co/datasets/xxparthparekhxx/indian-stock-market-minute-data) |
+| FNSPID | GitHub | [Zdong104/FNSPID_Financial_News_Dataset](https://github.com/Zdong104/FNSPID_Financial_News_Dataset) |
+| Optiver Realized Volatility | Kaggle | [optiver-realized-volatility-prediction/data](https://www.kaggle.com/competitions/optiver-realized-volatility-prediction/data) |
+| S&P 500 Daily Stocks | Kaggle | [andrewmvd/sp-500-stocks](https://www.kaggle.com/datasets/andrewmvd/sp-500-stocks) |
+
+> 💡 **Note:** The Kaggle datasets require you to log into your Kaggle account and accept competition rules for the Optiver dataset. The S&P 500 dataset and Hugging Face datasets are available for immediate download.
