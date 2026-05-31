@@ -1,0 +1,5 @@
+Visit Kaggle: Huge Stock Market Dataset
+
+Download the Stocks folder (you can use the Kaggle API: kaggle datasets download borismarjanovic/price-volume-data-for-all-us-stocks-etfs and unzip).
+
+Place the extracted Stocks directory in your project folder. All ticker files (e.g., aapl.us.txt) are inside.
