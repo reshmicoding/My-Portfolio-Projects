@@ -1,0 +1,105 @@
+**Harvard University · Data Science for Finance (DS-240)**  
+**Final Project: Factor-Driven Portfolio Construction and Risk Management at Scale**
+
+As your mentor, I’ve designed this project to test your mastery of the Python data‑science stack in a realistic, demanding financial context. It is intentionally difficult, requiring you to handle a large, messy dataset, perform rigorous statistical modeling, and build an end-to-end backtesting framework – all while writing clean, efficient, and well‑documented code. The skills you demonstrate here mirror what top quantitative funds expect from their data‑science hires.
+
+---
+
+### Project Objective
+Construct a dynamic, factor‑based equity portfolio on the entire US stock universe (or a very large subset) and rigorously evaluate its out‑of‑sample performance against standard benchmarks. You will ingest and clean massive tick‑level data, estimate rolling multi‑factor models, solve constrained portfolio optimizations, implement a realistic backtest, and produce a comprehensive risk‑attribution report.
+
+---
+
+### Core Libraries Tested
+| Library | Primary Role |
+|---------|--------------|
+| `pandas`  | Data ingestion, cleaning, alignment, rolling computations, performance analytics. You will need chunking, `groupby`, `merge_asof`, and efficient memory management. |
+| `numpy`   | Matrix algebra for covariance estimation, portfolio return calculations, and custom metrics. |
+| `matplotlib` & `seaborn` | All visualizations: efficient frontier, cumulative returns, drawdowns, heatmaps of factor loadings, and attribution charts. |
+| `statsmodels` | Factor regressions (OLS), time‑series diagnostics (autocorrelation, heteroskedasticity), GARCH volatility modeling. |
+| `scipy` | Constrained convex optimization (`scipy.optimize.minimize`), statistical tests (`scipy.stats`), and distribution fitting for risk. |
+
+---
+
+### Dataset (Large & Real‑World)
+**Huge Stock Market Dataset**  
+*Daily price and volume for every US‑listed stock and ETF from 1970 to 2017.*  
+- Source: Kaggle (Boris Marjanovic)  
+- Link: [https://www.kaggle.com/datasets/borismarjanovic/price-volume-data-for-all-us-stocks-etfs](https://www.kaggle.com/datasets/borismarjanovic/price-volume-data-for-all-us-stocks-etfs)  
+- Size: ~2.5 GB compressed; expands to tens of GBs in CSV files for ~7,000 individual securities.  
+- **You must process the raw, un‑merged files yourself.** No pre‑combined panel is provided.  
+
+*Supplementary data* (to be downloaded via `pandas-datareader` or directly from Ken French’s website):  
+Fama–French 5‑factor daily returns (market, size, value, profitability, investment) and the risk‑free rate.
+
+---
+
+### Detailed Tasks
+
+#### 1. Data Engineering & Cleaning (pandas, numpy)
+- **Ingestion:** Loop over all ticker CSV files (or a filtered list of S&P 1500 constituents at a chosen date) using `pd.read_csv` with careful `dtype` specification. Use **chunking** where necessary to avoid memory blow‑up.  
+- **Universe alignment:** Parse dates, set `Date` index, and align all stocks to a common trading calendar. Handle corporate actions (if you extract from the “adjusted close” already present in the dataset, note any remaining splits/dividends). Drop stocks with insufficient history (e.g., fewer than 60 daily observations).  
+- **Returns computation:** Compute daily arithmetic and log returns using `pct_change()` after ensuring no look‑ahead bias. Clean outliers (winsorize at 0.1% and 99.9% per day using `scipy.stats.mstats.winsorize` or manual numpy).  
+- **Memory efficiency:** Downcast numeric columns, use categorical `dtype` for tickers, and store aligned data in a **tidy (long) format** or a sparse pivot table—justify your choice for the downstream tasks.
+
+#### 2. Exploratory Analysis (matplotlib, seaborn, numpy)
+- Plot the cross‑sectional mean, median, and dispersion of daily returns over time.  
+- For the 50 most liquid stocks, show a clustered correlation heatmap of returns (one calendar year).  
+- Visualize the eigenvalue spectrum of the covariance matrix and discuss the “curse of dimensionality” (random matrix theory insights optional).
+
+#### 3. Factor Model Estimation (statsmodels, pandas)
+- **Rolling betas:** For every stock, on each rebalancing date (month‑end), run an OLS regression of the stock’s **excess returns** (over risk‑free) on the Fama–French 5 factors using a rolling window of **60 months** of daily data. You must implement this efficiently with `pandas.rolling().apply()` that calls `statsmodels.OLS`, or use a groupby‑apply approach. Store the estimated alpha, loadings, and R².  
+- **Handling missing data:** Ensure only stocks with a full 60‑month history on a given date enter the regression; document your decisions.  
+- **Post‑estimation diagnostics:** For a representative stock, plot the rolling betas and their confidence intervals over the full sample. Test for residual autocorrelation (Durbin‑Watson) and heteroskedasticity (Breusch‑Pagan) using `statsmodels` – show these diagnostics on a random sub‑sample.
+
+#### 4. Covariance & Risk Modeling (numpy, scipy, statsmodels)
+- **Covariance estimator:** Build both the sample covariance matrix (on daily returns from the past 60 months) and a **shrunk** estimator (Ledoit‑Wolf) using `scipy.linalg` or a custom implementation (do not use `sklearn`—you must demonstrate numpy proficiency).  
+- **GARCH volatility:** Fit an asymmetric GARCH(1,1) model (`statsmodels.tsa.garch`) to the equally‑weighted portfolio returns. Extract conditional volatility and plot against realized volatility. Use this to compute **parametric 99% 1‑day VaR** and compare it with a historical VaR and a Cornish‑Fisher VaR (scipy’s percent point function).
+
+#### 5. Portfolio Optimization (scipy, numpy)
+- At each rebalance date, solve two optimization problems:
+  - **Minimum variance portfolio** (long‑only, weights sum to 1, individual weight ≤ 0.05)  
+  - **Maximum Sharpe ratio portfolio** (tangency), using the shrunk covariance matrix and expected returns = intercept‑adjusted factor forecasts (or simply the historical mean, but you must discuss the bias).  
+- Use `scipy.optimize.minimize` with the SLSQP method. Check that the optimum is reasonable; add a small L2 penalty if needed.  
+- Plot the **efficient frontier** for a selected rebalance date, marking the minimum variance, tangency, and equal‑weight portfolios. Use `matplotlib` to create a publication‑quality figure.
+
+#### 6. Backtest Engine (pandas, numpy)
+- **Out‑of‑sample implementation:** For each month from (say) 2010‑01‑01 to 2017‑12‑31:
+  1. Use data up to month‑end to estimate betas and covariance (as above).  
+  2. Compute optimal weights.  
+  3. Hold those weights for the next month’s daily returns.  
+  4. Track portfolio value daily, assuming frictionless trading (ignore transaction costs, but discuss their impact in the report).  
+- **Benchmarks:** Compute the same metrics for an equal‑weighted portfolio and a market‑cap‑weighted portfolio of the same universe.  
+- **Performance analytics:** Calculate annualized return, volatility, Sharpe ratio, maximum drawdown, and Calmar ratio using numpy/pandas. Visualize cumulative returns, drawdowns, and rolling 1‑year Sharpe. Conduct a statistical test (e.g., paired t‑test using `scipy.stats.ttest_rel`) to see if your strategy significantly outperforms the equal‑weight benchmark.
+
+#### 7. Attribution & Reporting
+- **Factor attribution:** On each rebalance date, decompose the portfolio’s excess return into contributions from the five factors + alpha (use the loadings and portfolio weights). Plot the cumulative factor‑contributed return vs. residual.  
+- **Sensitivity analysis:** Show how the strategy’s Sharpe ratio changes as you vary the rolling window length (36 vs. 60 vs. 84 months) and the rebalancing frequency (monthly vs. quarterly).  
+- **Narrative report:** A 4‑page executive summary (in the notebook’s markdown) explaining methodology, key findings, and critical reflections on data snooping, survivorship bias (since the dataset is delisted stocks? – you must address), and practical hurdles.
+
+---
+
+### Deliverables
+1. **Single Jupyter Notebook (.ipynb)**  
+   - Fully executable from top to bottom, with clear markdown cells explaining each step.  
+   - All visualizations embedded.  
+   - Code must be modular, commented, and PEP8‑compliant.  
+2. **Requirements file** (`requirements.txt`) listing exact package versions used.  
+3. **Project report** (last section of the notebook) – the executive summary with critical analysis.
+
+---
+
+### Grading Emphasis
+- **Correctness & sophistication of library usage (40%):** Are pandas operations vectorized? Is statsmodels’ regression output properly interpreted? Are scipy optimizers correctly constrained?  
+- **Data handling at scale (20%):** Did you handle memory constraints? Did you justify data structure choices?  
+- **Visualization & communication (20%):** Are plots clear, labeled, and effectively tell the story of the analysis?  
+- **Critical thinking (20%):** Did you discuss biases, limitations, and potential improvements? Did you correctly implement out‑of‑sample logic to avoid look‑ahead bias?
+
+---
+
+### Getting the Dataset
+1. Visit [Kaggle: Huge Stock Market Dataset](https://www.kaggle.com/datasets/borismarjanovic/price-volume-data-for-all-us-stocks-etfs)  
+2. Download the `Stocks` folder (you can use the Kaggle API: `kaggle datasets download borismarjanovic/price-volume-data-for-all-us-stocks-etfs` and unzip).  
+3. Place the extracted `Stocks` directory in your project folder. All ticker files (e.g., `aapl.us.txt`) are inside.  
+
+I am confident that tackling this project will transform you from a student who “knows the libraries” into a practitioner who can build institutional‑grade data pipelines and quantitative models. Lean on your understanding of the Python ecosystem, and don’t hesitate to push the boundaries – after all, you’re at Harvard to do exactly that.
